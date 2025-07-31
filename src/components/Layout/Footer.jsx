@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import SafeIcon from '../../common/SafeIcon'
 import * as FiIcons from 'react-icons/fi'
 
-const { FiGlobe, FiMail, FiPhone, FiMapPin } = FiIcons
+const { FiMail, FiPhone } = FiIcons
 
 const Footer = () => {
   return (
@@ -12,14 +12,29 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-3 mb-4">
-              <SafeIcon icon={FiGlobe} className="h-8 w-8 text-primary-400" />
+              <img 
+                src="/logo.png" 
+                alt="Regravity Logo" 
+                className="h-8 w-8 object-contain"
+                onError={(e) => {
+                  // Fallback to text logo if image fails to load
+                  e.target.style.display = 'none'
+                  e.target.nextSibling.style.display = 'block'
+                }}
+              />
+              <div style={{ display: 'none' }} className="fallback-logo">
+                <div className="h-8 w-8 bg-primary-400 rounded flex items-center justify-center">
+                  <span className="text-white font-bold">R</span>
+                </div>
+              </div>
               <div>
                 <h3 className="text-xl font-bold">Regravity</h3>
                 <p className="text-sm text-gray-400">International Trade Platform</p>
               </div>
             </div>
             <p className="text-gray-400 mb-4 max-w-md">
-              Connecting overseas buyers with Chinese suppliers through secure, transparent trade contract management and dispute resolution.
+              Connecting overseas buyers with Chinese suppliers through secure, transparent trade 
+              contract management and dispute resolution.
             </p>
             <div className="space-y-2 text-sm text-gray-400">
               <p><strong>Hong Kong:</strong> Regravity Ltd</p>
@@ -32,7 +47,7 @@ const Footer = () => {
             <h4 className="text-lg font-semibold mb-4">Services</h4>
             <ul className="space-y-2 text-gray-400">
               <li>
-                <Link 
+                <Link
                   to="/services"
                   onClick={() => {
                     setTimeout(() => {
@@ -48,7 +63,7 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link 
+                <Link
                   to="/services"
                   onClick={() => {
                     setTimeout(() => {
@@ -64,7 +79,7 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link 
+                <Link
                   to="/services"
                   onClick={() => {
                     setTimeout(() => {
@@ -80,7 +95,7 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link 
+                <Link
                   to="/services"
                   onClick={() => {
                     setTimeout(() => {
@@ -96,7 +111,7 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link 
+                <Link
                   to="/services"
                   onClick={() => {
                     setTimeout(() => {

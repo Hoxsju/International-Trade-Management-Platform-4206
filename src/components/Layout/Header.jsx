@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import SafeIcon from '../../common/SafeIcon'
 import * as FiIcons from 'react-icons/fi'
 
-const { FiGlobe, FiUser, FiLogOut, FiMenu, FiX } = FiIcons
+const { FiUser, FiLogOut, FiMenu, FiX } = FiIcons
 
 const Header = () => {
   const { user, signOut } = useAuth()
@@ -27,7 +27,21 @@ const Header = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3" onClick={closeMobileMenu}>
-            <SafeIcon icon={FiGlobe} className="h-8 w-8 text-primary-600" />
+            <img 
+              src="/logo.png" 
+              alt="Regravity Logo" 
+              className="h-10 w-10 object-contain"
+              onError={(e) => {
+                // Fallback to text logo if image fails to load
+                e.target.style.display = 'none'
+                e.target.nextSibling.style.display = 'block'
+              }}
+            />
+            <div style={{ display: 'none' }} className="fallback-logo">
+              <div className="h-8 w-8 bg-primary-600 rounded flex items-center justify-center">
+                <span className="text-white font-bold text-lg">R</span>
+              </div>
+            </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900">Regravity</h1>
               <p className="text-xs text-gray-500">International Trade Platform</p>
@@ -45,11 +59,11 @@ const Header = () => {
             <Link to="/contact" className="text-gray-600 hover:text-gray-900 transition-colors">
               Contact
             </Link>
-            
+
             {user ? (
               <div className="flex items-center space-x-4">
-                <Link 
-                  to="/dashboard" 
+                <Link
+                  to="/dashboard"
                   className="text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   Dashboard
@@ -58,7 +72,7 @@ const Header = () => {
                   <SafeIcon icon={FiUser} className="h-4 w-4 text-gray-500" />
                   <span className="text-sm text-gray-700">{user.email}</span>
                 </div>
-                <button 
+                <button
                   onClick={handleSignOut}
                   className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 transition-colors"
                 >
@@ -68,14 +82,14 @@ const Header = () => {
               </div>
             ) : (
               <div className="flex items-center space-x-4">
-                <Link 
-                  to="/login" 
+                <Link
+                  to="/login"
                   className="text-gray-600 hover:text-gray-900 transition-colors"
                 >
                   Sign In
                 </Link>
-                <Link 
-                  to="/register" 
+                <Link
+                  to="/register"
                   className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
                 >
                   Get Started
@@ -85,7 +99,7 @@ const Header = () => {
           </nav>
 
           {/* Mobile Menu Button */}
-          <button 
+          <button
             className="md:hidden p-2"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
@@ -97,32 +111,32 @@ const Header = () => {
         {mobileMenuOpen && (
           <div className="md:hidden border-t bg-white py-4">
             <nav className="flex flex-col space-y-4">
-              <Link 
-                to="/about" 
+              <Link
+                to="/about"
                 className="text-gray-600 hover:text-gray-900 transition-colors px-2"
                 onClick={closeMobileMenu}
               >
                 About
               </Link>
-              <Link 
-                to="/services" 
+              <Link
+                to="/services"
                 className="text-gray-600 hover:text-gray-900 transition-colors px-2"
                 onClick={closeMobileMenu}
               >
                 Services
               </Link>
-              <Link 
-                to="/contact" 
+              <Link
+                to="/contact"
                 className="text-gray-600 hover:text-gray-900 transition-colors px-2"
                 onClick={closeMobileMenu}
               >
                 Contact
               </Link>
-              
+
               {user ? (
                 <div className="flex flex-col space-y-4 px-2">
-                  <Link 
-                    to="/dashboard" 
+                  <Link
+                    to="/dashboard"
                     className="text-gray-600 hover:text-gray-900 transition-colors"
                     onClick={closeMobileMenu}
                   >
@@ -132,7 +146,7 @@ const Header = () => {
                     <SafeIcon icon={FiUser} className="h-4 w-4" />
                     <span>{user.email}</span>
                   </div>
-                  <button 
+                  <button
                     onClick={handleSignOut}
                     className="flex items-center space-x-1 text-gray-600 hover:text-gray-900 transition-colors text-left"
                   >
@@ -142,15 +156,15 @@ const Header = () => {
                 </div>
               ) : (
                 <div className="flex flex-col space-y-4 px-2">
-                  <Link 
-                    to="/login" 
+                  <Link
+                    to="/login"
                     className="text-gray-600 hover:text-gray-900 transition-colors"
                     onClick={closeMobileMenu}
                   >
                     Sign In
                   </Link>
-                  <Link 
-                    to="/register" 
+                  <Link
+                    to="/register"
                     className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors text-center"
                     onClick={closeMobileMenu}
                   >

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="./vite.svg" />
+    <link rel="icon" type="image/png" href="./logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
     <!-- Primary Meta Tags -->
@@ -15,11 +15,13 @@
     <meta property="og:url" content="">
     <meta property="og:title" content="Regravity - International Trade Platform">
     <meta property="og:description" content="Secure international trade platform connecting overseas buyers with Chinese suppliers.">
+    <meta property="og:image" content="./logo.png">
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:title" content="Regravity - International Trade Platform">
     <meta property="twitter:description" content="Secure international trade platform connecting overseas buyers with Chinese suppliers.">
+    <meta property="twitter:image" content="./logo.png">
     
     <!-- Robots -->
     <meta name="robots" content="index, follow">
@@ -33,60 +35,91 @@
     <div id="root">
       <!-- Enhanced loading fallback with better styling -->
       <div id="loading-fallback" style="
-        display: flex; 
-        justify-content: center; 
-        align-items: center; 
-        height: 100vh; 
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         margin: 0;
         padding: 0;
       ">
         <div style="
-          text-align: center; 
-          padding: 3rem; 
-          background: rgba(255, 255, 255, 0.95); 
-          border-radius: 16px; 
-          box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+          text-align: center;
+          padding: 3rem;
+          background: rgba(255, 255, 255, 0.95);
+          border-radius: 16px;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
           backdrop-filter: blur(10px);
           max-width: 400px;
           width: 90%;
         ">
           <div style="
-            width: 60px; 
-            height: 60px; 
-            border: 4px solid #e5e7eb; 
-            border-top: 4px solid #3b82f6; 
-            border-radius: 50%; 
-            animation: spin 1s linear infinite; 
+            width: 60px;
+            height: 60px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
             margin: 0 auto 2rem;
           "></div>
-          <h1 style="
-            color: #1f2937; 
-            margin-bottom: 1rem; 
-            font-size: 1.5rem; 
-            font-weight: 600;
-            letter-spacing: -0.025em;
-          ">Loading Regravity</h1>
+          <div style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+          ">
+            <img 
+              src="./logo.png" 
+              alt="Regravity Logo" 
+              style="
+                height: 40px;
+                width: 40px;
+                object-fit: contain;
+                margin-right: 12px;
+              "
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            />
+            <div style="
+              display: none;
+              height: 40px;
+              width: 40px;
+              background: #3b82f6;
+              border-radius: 50%;
+              align-items: center;
+              justify-content: center;
+              margin-right: 12px;
+              font-weight: bold;
+              color: white;
+              font-size: 20px;
+            ">R</div>
+            <h1 style="
+              color: #1f2937;
+              margin: 0;
+              font-size: 1.5rem;
+              font-weight: 600;
+              letter-spacing: -0.025em;
+            ">Loading Regravity</h1>
+          </div>
           <p style="
-            color: #6b7280; 
-            font-size: 1rem; 
+            color: #6b7280;
+            font-size: 1rem;
             margin-bottom: 0;
             opacity: 0.8;
           ">International Trade Platform</p>
           <div style="
-            width: 100%; 
-            height: 4px; 
-            background: #e5e7eb; 
-            border-radius: 2px; 
-            margin-top: 1.5rem; 
+            width: 100%;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            margin-top: 1.5rem;
             overflow: hidden;
           ">
             <div style="
-              width: 30%; 
-              height: 100%; 
-              background: linear-gradient(90deg, #3b82f6, #1d4ed8); 
-              border-radius: 2px; 
+              width: 30%;
+              height: 100%;
+              background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+              border-radius: 2px;
               animation: progress 2s ease-in-out infinite;
             "></div>
           </div>

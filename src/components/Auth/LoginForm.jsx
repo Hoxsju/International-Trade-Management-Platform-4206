@@ -274,18 +274,8 @@ const LoginForm = () => {
         </p>
       </div>
 
-      {/* Test Account Info */}
-      <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
-        <h4 className="font-medium text-green-900 mb-2">✅ Test Account Available</h4>
-        <div className="text-sm text-green-800 space-y-1">
-          <p><strong>Email:</strong> hoxs@regravity.net</p>
-          <p><strong>Password:</strong> Hoxs1234</p>
-          <p><strong>Type:</strong> Admin account (full access)</p>
-        </div>
-      </div>
-
       {/* Production Info */}
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <h4 className="font-semibold text-blue-900 mb-2">🔐 Production Security</h4>
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• 📧 EmailJS verification for unconfirmed accounts</li>
