@@ -11,7 +11,7 @@ export default defineConfig({
     sourcemap: false,
     minify: true,
     target: 'es2015',
-    // Ensure proper asset handling
+    // PRODUCTION: Enhanced build configuration
     rollupOptions: {
       output: {
         entryFileNames: 'assets/[name].[hash].js',
@@ -19,9 +19,15 @@ export default defineConfig({
         assetFileNames: 'assets/[name].[hash].[ext]',
         manualChunks: {
           vendor: ['react', 'react-dom'],
-          router: ['react-router-dom']
+          router: ['react-router-dom'],
+          supabase: ['@supabase/supabase-js'],
+          emailjs: ['@emailjs/browser']
         }
       }
+    },
+    // PRODUCTION: Ensure all dependencies are bundled
+    commonjsOptions: {
+      include: [/node_modules/]
     }
   },
   server: {
@@ -33,5 +39,11 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 4173,
     strictPort: false
+  },
+  // PRODUCTION: Resolve configuration for better compatibility
+  resolve: {
+    alias: {
+      '@': '/src'
+    }
   }
 })

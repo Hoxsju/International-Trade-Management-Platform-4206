@@ -1,4 +1,4 @@
-// EmailJS Configuration - FIXED to avoid Outlook permission issues
+// EmailJS Configuration for Production
 export const emailjsConfig = {
   serviceId: 'service_wi64yag',
   templateIds: {
@@ -6,7 +6,7 @@ export const emailjsConfig = {
     verification: 'template_verification'
   },
   publicKey: 'vORcF7sb8ElcTqXWo',
-  // FIXED: Add sender configuration to avoid permission issues
+  // Production sender configuration
   defaultSender: {
     name: 'Regravity Platform',
     email: 'noreply@regravity.net',
@@ -23,16 +23,16 @@ export const validateEmailJSConfig = () => {
     return false
   }
   
-  console.log('✅ EmailJS configured with fixed sender settings')
+  console.log('✅ EmailJS configured for production domain')
   return true
 }
 
-// Initialize EmailJS when in browser (only in development)
-if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+// Initialize EmailJS for production
+if (typeof window !== 'undefined') {
   import('@emailjs/browser').then(emailjs => {
     if (emailjs.default?.init) {
       emailjs.default.init(emailjsConfig.publicKey)
-      console.log('✅ EmailJS initialized with fixed configuration')
+      console.log('✅ EmailJS initialized for regravity.net')
     }
   }).catch(error => {
     console.warn('⚠️ EmailJS initialization failed:', error)
