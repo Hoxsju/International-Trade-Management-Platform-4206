@@ -95,7 +95,7 @@ export class AuthService {
       }
       
       console.log('✅ User profile created successfully')
-
+      
       return {
         success: true,
         message: 'Registration successful! Please check your email for a confirmation link to verify your account.',
@@ -106,7 +106,6 @@ export class AuthService {
           profile: profileResult.data
         }
       }
-      
     } catch (error) {
       console.error('💥 Registration failed:', error)
       // Enhanced error handling
@@ -173,7 +172,7 @@ export class AuthService {
         console.error('❌ Failed to load profile:', profileResult.error)
         throw new Error('Failed to load user profile. Please contact support.')
       }
-
+      
       // Update email verified status if needed
       if (loginData.user.email_confirmed_at && !profileResult.data.email_verified) {
         await ProfileService.updateUserProfile(loginData.user.id, {
@@ -193,7 +192,6 @@ export class AuthService {
           profile: profileResult.data
         }
       }
-      
     } catch (error) {
       console.error('💥 Login failed:', error)
       // Enhanced error handling
@@ -225,7 +223,7 @@ export class AuthService {
       // Use Supabase's built-in password reset
       console.log('📧 Sending password reset email via Supabase...')
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: window.location.origin + '/#/reset-password'
+        redirectTo: `${window.location.origin}/#/reset-password`
       })
       
       if (error) {
@@ -239,9 +237,39 @@ export class AuthService {
         message: 'Password reset instructions have been sent to your email.',
         email: cleanEmail
       }
-      
     } catch (error) {
       console.error('💥 Password reset request failed:', error)
+      return {
+        success: false,
+        message: error.message
+      }
+    }
+  }
+
+  // Update password after reset
+  static async updatePassword(newPassword) {
+    console.log('🔑 Updating password...')
+    try {
+      if (!newPassword || newPassword.length < 6) {
+        throw new Error('Password must be at least 6 characters')
+      }
+      
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      })
+      
+      if (error) {
+        console.error('❌ Password update error:', error)
+        throw new Error(`Failed to update password: ${error.message}`)
+      }
+      
+      console.log('✅ Password updated successfully')
+      return {
+        success: true,
+        message: 'Password updated successfully. You can now log in with your new password.'
+      }
+    } catch (error) {
+      console.error('💥 Password update failed:', error)
       return {
         success: false,
         message: error.message
@@ -264,7 +292,7 @@ export class AuthService {
         type: 'signup',
         email: cleanEmail,
         options: {
-          redirectTo: window.location.origin + '/#/login'
+          redirectTo: `${window.location.origin}/#/auth/callback`
         }
       })
       
@@ -277,7 +305,6 @@ export class AuthService {
         success: true,
         message: 'Confirmation email sent! Please check your inbox.'
       }
-      
     } catch (error) {
       console.error('❌ Failed to resend confirmation email:', error)
       return {

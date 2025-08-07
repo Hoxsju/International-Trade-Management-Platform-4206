@@ -16,6 +16,7 @@ const RefundPolicyPage = React.lazy(() => import('./components/Pages/RefundPolic
 const LoginForm = React.lazy(() => import('./components/Auth/LoginForm'))
 const RegisterForm = React.lazy(() => import('./components/Auth/RegisterForm'))
 const ForgotPasswordForm = React.lazy(() => import('./components/Auth/ForgotPasswordForm'))
+const ResetPasswordForm = React.lazy(() => import('./components/Auth/ResetPasswordForm'))
 const DashboardRouter = React.lazy(() => import('./components/Dashboard/DashboardRouter'))
 const CreateOrderForm = React.lazy(() => import('./components/Orders/CreateOrderForm'))
 const OrderDetailPage = React.lazy(() => import('./components/Orders/OrderDetailPage'))
@@ -87,6 +88,24 @@ const NotFoundPage = () => (
     </div>
   </div>
 )
+
+// Auth callback handler for email confirmations
+const AuthCallbackHandler = () => {
+  const { user } = useAuth()
+  const navigate = React.useNavigate()
+
+  React.useEffect(() => {
+    // If user is authenticated, redirect to dashboard
+    // Otherwise redirect to login
+    if (user) {
+      navigate('/dashboard')
+    } else {
+      navigate('/login')
+    }
+  }, [user, navigate])
+
+  return <LoadingFallback />
+}
 
 // Home component that redirects authenticated users
 const HomeWithRedirect = () => {
@@ -193,6 +212,10 @@ function App() {
                 <Route path="/login" element={<ScrollToTopWrapper><LoginForm /></ScrollToTopWrapper>} />
                 <Route path="/register" element={<ScrollToTopWrapper><RegisterForm /></ScrollToTopWrapper>} />
                 <Route path="/forgot-password" element={<ScrollToTopWrapper><ForgotPasswordForm /></ScrollToTopWrapper>} />
+                <Route path="/reset-password" element={<ScrollToTopWrapper><ResetPasswordForm /></ScrollToTopWrapper>} />
+                
+                {/* Auth callback route for email confirmation */}
+                <Route path="/auth/callback" element={<AuthCallbackHandler />} />
 
                 {/* Testing Routes */}
                 <Route path="/email-test" element={<ScrollToTopWrapper><EmailJSTest /></ScrollToTopWrapper>} />

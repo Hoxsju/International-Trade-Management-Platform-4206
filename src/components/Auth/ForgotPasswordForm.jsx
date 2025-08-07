@@ -50,6 +50,9 @@ const ForgotPasswordForm = () => {
           <p className="text-green-700 mb-4">
             If an account exists with the email you provided, we've sent password reset instructions.
           </p>
+          <p className="text-green-700 mb-4">
+            Click the link in the email, and you'll be directed to a page where you can create a new password.
+          </p>
           <Link
             to="/login"
             className="inline-block bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700"

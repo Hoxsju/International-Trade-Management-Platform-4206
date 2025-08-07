@@ -16,10 +16,10 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
-    // Standard redirects for email confirmation
+    // URL redirects for authentication flows
     redirectTo: typeof window !== 'undefined' 
-      ? window.location.origin + '/#/login' 
-      : 'https://regravity.net/#/login',
+      ? `${window.location.origin}/#/auth/callback`
+      : 'https://regravity.net/#/auth/callback',
   },
   // PRODUCTION: Enhanced connection settings
   db: {

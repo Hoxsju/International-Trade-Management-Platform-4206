@@ -7,17 +7,18 @@ import * as FiIcons from 'react-icons/fi'
 
 const { FiUser, FiMail, FiPhone, FiBuilding, FiMapPin, FiMessageSquare, FiFileText, FiAlertTriangle, FiCheckCircle, FiClock } = FiIcons
 
+// PRODUCTION: Main Registration Form
 const RegisterForm = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm()
   const navigate = useNavigate()
   
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [registrationSuccess, setRegistrationSuccess] = useState(false)
-  const [registeredEmail, setRegisteredEmail] = useState('')
+  const [success, setSuccess] = useState(false)
+  const [registrationEmail, setRegistrationEmail] = useState('')
   
   const accountType = watch('accountType')
-
+  
   const onSubmit = async (data) => {
     console.log('📝 Registration form submitted for regravity.net')
     setLoading(true)
@@ -28,15 +29,33 @@ const RegisterForm = () => {
       const result = await AuthService.registerUser(data)
       
       if (result.success) {
-        console.log('✅ Registration successful, email verification required')
-        setRegistrationSuccess(true)
-        setRegisteredEmail(data.email)
+        console.log('✅ Registration successful')
+        setSuccess(true)
+        setRegistrationEmail(data.email)
       } else {
         throw new Error(result.message || 'Registration failed')
       }
     } catch (err) {
       console.error('❌ Registration error:', err)
       setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+  
+  const handleResendConfirmation = async () => {
+    if (!registrationEmail) return
+    
+    setLoading(true)
+    try {
+      const result = await AuthService.resendConfirmationEmail(registrationEmail)
+      if (result.success) {
+        alert('Confirmation email sent! Please check your inbox.')
+      } else {
+        setError(result.message)
+      }
+    } catch (err) {
+      setError('Failed to resend confirmation email. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -50,23 +69,28 @@ const RegisterForm = () => {
         <p className="text-sm text-primary-600 font-medium">regravity.net</p>
       </div>
 
-      {registrationSuccess ? (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-8 text-center">
-          <SafeIcon icon={FiCheckCircle} className="h-16 w-16 text-green-500 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-green-800 mb-3">Registration Successful!</h3>
-          <p className="text-green-700 mb-6">
-            We've sent a confirmation email to <strong>{registeredEmail}</strong>.
-            Please check your inbox and click the verification link to activate your account.
+      {success ? (
+        <div className="bg-green-50 border border-green-200 rounded-md p-6 text-center">
+          <SafeIcon icon={FiCheckCircle} className="h-12 w-12 text-green-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-green-800 mb-2">Registration Successful!</h3>
+          <p className="text-green-700 mb-4">
+            We've sent a confirmation email to <strong>{registrationEmail}</strong>.<br />
+            Please check your inbox and click the link to activate your account.
           </p>
-          <div className="space-y-4">
-            <p className="text-sm text-green-600">
-              If you don't see the email in your inbox, please check your spam folder.
-            </p>
-            <Link 
-              to="/login" 
-              className="inline-block bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700"
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button
+              onClick={handleResendConfirmation}
+              disabled={loading}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center justify-center space-x-2 mx-auto"
             >
-              Go to Login Page
+              <SafeIcon icon={loading ? FiClock : FiMail} className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>{loading ? 'Sending...' : 'Resend Confirmation Email'}</span>
+            </button>
+            <Link
+              to="/login"
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center justify-center space-x-2 mx-auto"
+            >
+              <span>Go to Login</span>
             </Link>
           </div>
         </div>
@@ -249,17 +273,8 @@ const RegisterForm = () => {
               disabled={loading}
               className="w-full bg-primary-600 text-white py-3 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 flex items-center justify-center space-x-2"
             >
-              {loading ? (
-                <>
-                  <SafeIcon icon={FiClock} className="h-4 w-4 animate-spin" />
-                  <span>Creating Account...</span>
-                </>
-              ) : (
-                <>
-                  <SafeIcon icon={FiCheckCircle} className="h-4 w-4" />
-                  <span>Create Account</span>
-                </>
-              )}
+              <SafeIcon icon={loading ? FiClock : FiCheckCircle} className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>{loading ? 'Creating Account...' : 'Create Account'}</span>
             </button>
           </form>
 
