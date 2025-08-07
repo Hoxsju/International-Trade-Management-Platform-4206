@@ -15,6 +15,7 @@ const DisputeResolutionPage = React.lazy(() => import('./components/Pages/Disput
 const RefundPolicyPage = React.lazy(() => import('./components/Pages/RefundPolicyPage'))
 const LoginForm = React.lazy(() => import('./components/Auth/LoginForm'))
 const RegisterForm = React.lazy(() => import('./components/Auth/RegisterForm'))
+const ForgotPasswordForm = React.lazy(() => import('./components/Auth/ForgotPasswordForm'))
 const DashboardRouter = React.lazy(() => import('./components/Dashboard/DashboardRouter'))
 const CreateOrderForm = React.lazy(() => import('./components/Orders/CreateOrderForm'))
 const OrderDetailPage = React.lazy(() => import('./components/Orders/OrderDetailPage'))
@@ -53,7 +54,6 @@ const NotFoundPage = () => (
       <p className="text-gray-600 mb-8 text-lg leading-relaxed">
         The page you're looking for doesn't exist or has been moved. Don't worry, let's get you back on track!
       </p>
-      
       <div className="space-y-4 mb-8">
         <a
           href="/#/"
@@ -80,7 +80,6 @@ const NotFoundPage = () => (
           📞 Contact Support
         </a>
       </div>
-
       <div className="text-sm text-gray-500">
         <p className="mb-2">🔧 <strong>Having deployment issues?</strong></p>
         <p>Check that your hosting platform is configured to serve <code className="bg-gray-100 px-2 py-1 rounded">index.html</code> for all routes.</p>
@@ -96,15 +95,15 @@ const HomeWithRedirect = () => {
   React.useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
-
+  
   if (loading) {
     return <LoadingFallback />
   }
-
+  
   if (user) {
     return <Navigate to="/dashboard" replace />
   }
-
+  
   return <HomePage />
 }
 
@@ -113,30 +112,30 @@ const ScrollToTopWrapper = ({ children }) => {
   React.useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }, [])
-
+  
   return children
 }
 
 function App() {
   const [hasError, setHasError] = React.useState(false)
   const [errorDetails, setErrorDetails] = React.useState('')
-
+  
   React.useEffect(() => {
     const handleError = (event) => {
       console.error('App Error:', event.error)
       setHasError(true)
       setErrorDetails(event.error?.message || 'Unknown error')
     }
-
+    
     const handleRejection = (event) => {
       console.error('Unhandled Rejection:', event.reason)
       setHasError(true)
       setErrorDetails(event.reason?.message || 'Promise rejection')
     }
-
+    
     window.addEventListener('error', handleError)
     window.addEventListener('unhandledrejection', handleRejection)
-
+    
     return () => {
       window.removeEventListener('error', handleError)
       window.removeEventListener('unhandledrejection', handleRejection)
@@ -193,6 +192,7 @@ function App() {
                 <Route path="/refund-policy" element={<ScrollToTopWrapper><RefundPolicyPage /></ScrollToTopWrapper>} />
                 <Route path="/login" element={<ScrollToTopWrapper><LoginForm /></ScrollToTopWrapper>} />
                 <Route path="/register" element={<ScrollToTopWrapper><RegisterForm /></ScrollToTopWrapper>} />
+                <Route path="/forgot-password" element={<ScrollToTopWrapper><ForgotPasswordForm /></ScrollToTopWrapper>} />
 
                 {/* Testing Routes */}
                 <Route path="/email-test" element={<ScrollToTopWrapper><EmailJSTest /></ScrollToTopWrapper>} />
@@ -216,7 +216,6 @@ function App() {
                     </ProtectedRoute>
                   </Suspense>
                 </ScrollToTopWrapper>} />
-                
                 <Route path="/create-order" element={<ScrollToTopWrapper>
                   <Suspense fallback={<LoadingFallback />}>
                     <ProtectedRoute>
@@ -224,7 +223,6 @@ function App() {
                     </ProtectedRoute>
                   </Suspense>
                 </ScrollToTopWrapper>} />
-
                 <Route path="/order/:orderId" element={<ScrollToTopWrapper>
                   <Suspense fallback={<LoadingFallback />}>
                     <ProtectedRoute>

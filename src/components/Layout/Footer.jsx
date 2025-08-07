@@ -33,7 +33,7 @@ const Footer = () => {
               </div>
             </div>
             <p className="text-gray-400 mb-4 max-w-md">
-              Connecting overseas buyers with Chinese suppliers through secure, transparent trade 
+              Connecting overseas buyers with Chinese suppliers through secure, transparent trade
               contract management and dispute resolution.
             </p>
             <div className="space-y-2 text-sm text-gray-400">
