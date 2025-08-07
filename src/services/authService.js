@@ -226,7 +226,7 @@ export class AuthService {
       // Get the current URL for proper redirect handling
       const origin = typeof window !== 'undefined' ? window.location.origin : 'https://regravity.net'
       
-      // FIXED: Better redirect URL formatting
+      // FIXED: Better redirect URL formatting with hash routing
       const redirectTo = `${origin}/#/reset-password`
       
       console.log('🔗 Reset password redirect URL:', redirectTo)
@@ -261,6 +261,14 @@ export class AuthService {
     try {
       if (!newPassword || newPassword.length < 6) {
         throw new Error('Password must be at least 6 characters')
+      }
+      
+      // Check if we have an active session
+      const { data: sessionData } = await supabase.auth.getSession()
+      
+      if (!sessionData?.session) {
+        console.error('❌ No active session found for password update')
+        throw new Error('No active session found. Please try the reset link again or request a new password reset.')
       }
       
       const { error } = await supabase.auth.updateUser({

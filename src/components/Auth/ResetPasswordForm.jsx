@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
 import SafeIcon from '../../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -14,94 +14,113 @@ const ResetPasswordForm = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
-  const [token, setToken] = useState('');
   
-  // Enhanced token extraction with multiple methods and detailed debugging
+  // Initialize token state
+  const [token, setToken] = useState('');
+  const [hasCheckedHash, setHasCheckedHash] = useState(false);
+
+  // Extract token from URL hash, query parameters, or type=recovery parameter
   useEffect(() => {
-    console.log('🔑 Starting password reset token extraction...');
+    console.log('🔍 Checking for reset token in URL...');
     console.log('📍 Current URL:', window.location.href);
-    
-    // Method 1: Extract from hash fragment with multiple patterns
-    let hashToken = null;
-    const hashPart = window.location.hash || '';
-    console.log('🔍 Hash part:', hashPart);
-    
-    // Try different hash patterns
-    const hashPatterns = [
-      /#\/reset-password\?token=([^&]+)/,  // /#/reset-password?token=abc
-      /#\/reset-password\/\?token=([^&]+)/,  // /#/reset-password/?token=abc
-      /#\/reset-password\/([^?&]+)/,  // /#/reset-password/abc
-      /#\/reset-password.*token=([^&]+)/,  // Any pattern with token= in hash
-    ];
-    
-    for (const pattern of hashPatterns) {
-      const match = hashPart.match(pattern);
-      if (match && match[1]) {
-        hashToken = match[1];
-        console.log('✅ Found token in hash with pattern:', pattern, hashToken);
-        break;
+    console.log('📍 Location hash:', window.location.hash);
+    console.log('📍 Location search:', window.location.search);
+
+    // Function to extract token from various URL formats
+    const extractTokenFromUrl = () => {
+      const url = window.location.href;
+      
+      // Check for access_token in hash fragment or search params
+      const hashMatch = url.match(/access_token=([^&]+)/);
+      if (hashMatch && hashMatch[1]) {
+        console.log('✅ Found access_token in URL');
+        return hashMatch[1];
       }
-    }
-    
-    // Method 2: Extract from search params (query string)
-    const searchToken = searchParams.get('token');
-    console.log('🔍 Search params token:', searchToken);
-    
-    // Method 3: Extract from location state
-    const stateToken = location?.state?.token;
-    console.log('🔍 Location state token:', stateToken);
-    
-    // Method 4: Look for access_token in hash or search (Supabase often uses this)
-    const accessTokenMatch = window.location.href.match(/access_token=([^&]+)/);
-    const accessToken = accessTokenMatch ? accessTokenMatch[1] : null;
-    console.log('🔍 Access token:', accessToken);
-    
-    // Method 5: Look for type=recovery in the URL (Supabase password reset flow)
-    const isRecoveryFlow = window.location.href.includes('type=recovery');
-    console.log('🔍 Is recovery flow:', isRecoveryFlow);
-    
-    // Use the first valid token found
-    const extractedToken = hashToken || searchToken || stateToken || accessToken || '';
-    
-    console.log('🔑 Final extracted token:', extractedToken ? `${extractedToken.substring(0, 5)}...` : 'Not found');
-    setToken(extractedToken);
-    
-    // If we have a token, check its validity with Supabase
-    if (extractedToken) {
-      console.log('✅ Token found, attempting validation...');
       
-      // Try to get session info
-      const checkToken = async () => {
-        try {
-          // This will work if the token is already in the URL and Supabase has processed it
-          const { data, error } = await supabase.auth.getSession();
-          if (!error && data?.session) {
-            console.log('✅ Valid session found with token');
-          } else {
-            console.log('⚠️ No active session yet, but token is present');
-          }
-        } catch (err) {
-          console.warn('⚠️ Token validation warning:', err.message);
+      // Check for token in query string
+      const searchParams = new URLSearchParams(window.location.search);
+      const queryToken = searchParams.get('token');
+      if (queryToken) {
+        console.log('✅ Found token in query params');
+        return queryToken;
+      }
+      
+      // Check for type=recovery in URL (Supabase password reset flow)
+      if (url.includes('type=recovery')) {
+        console.log('✅ Found recovery flow in URL');
+        // In recovery flow, Supabase automatically sets the session
+        return 'recovery_flow';
+      }
+      
+      // Parse hash fragment for tokens in various formats
+      const hashPart = window.location.hash || '';
+      
+      // Check common hash patterns
+      const hashPatterns = [
+        /#\/reset-password\?token=([^&]+)/,
+        /#\/reset-password\/\?token=([^&]+)/,
+        /#\/reset-password\/([^?&]+)/,
+        /#access_token=([^&]+)/
+      ];
+      
+      for (const pattern of hashPatterns) {
+        const match = hashPart.match(pattern);
+        if (match && match[1]) {
+          console.log('✅ Found token in hash fragment');
+          return match[1];
         }
-      };
+      }
       
-      checkToken();
+      return null;
+    };
+
+    // Get token from URL
+    const extractedToken = extractTokenFromUrl();
+    
+    if (extractedToken) {
+      console.log('🔑 Found reset token:', extractedToken.substring(0, 5) + '...');
+      setToken(extractedToken);
+      
+      // If we have a recovery flow token, try to get session
+      if (extractedToken === 'recovery_flow') {
+        console.log('🔄 Checking for recovery session...');
+        const checkSession = async () => {
+          const { data } = await supabase.auth.getSession();
+          if (data?.session) {
+            console.log('✅ Valid recovery session found');
+            setToken('valid_session');
+          } else {
+            console.log('❌ No recovery session found');
+          }
+        };
+        checkSession();
+      }
     } else {
       console.warn('⚠️ No reset token found in URL');
+    }
+    
+    setHasCheckedHash(true);
+  }, [location]);
+
+  // Once we've checked the hash, if we still don't have a token, check for an active session
+  useEffect(() => {
+    if (hasCheckedHash && !token) {
+      console.log('🔍 No token found in URL, checking for active session...');
       
-      // Fallback: Check if user is already authenticated (might be a direct access)
-      const checkAuth = async () => {
-        const { data } = await supabase.auth.getUser();
-        if (data?.user) {
-          console.log('✅ User is already authenticated, may proceed with reset');
-          setToken('authenticated'); // Special case - user is already logged in
+      const checkActiveSession = async () => {
+        const { data } = await supabase.auth.getSession();
+        if (data?.session) {
+          console.log('✅ Active session found, allowing password reset');
+          setToken('active_session');
+        } else {
+          console.log('❌ No active session found');
+          setError('No reset token found. This link may be invalid or expired. Please request a new password reset.');
         }
       };
       
-      checkAuth();
+      checkActiveSession();
     }
-  }, [location, searchParams]);
+  }, [hasCheckedHash, token]);
 
   const onSubmit = async (data) => {
     if (data.newPassword !== data.confirmPassword) {
@@ -115,7 +134,7 @@ const ResetPasswordForm = () => {
     try {
       console.log('🔐 Resetting password...');
       
-      // Use Supabase's built-in password reset functionality
+      // Use Supabase's updateUser function to reset password
       const { error: resetError } = await supabase.auth.updateUser({
         password: data.newPassword
       });
