@@ -10,6 +10,14 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error('Database configuration is required')
 }
 
+// Get the current URL for proper redirect handling
+const getRedirectUrl = () => {
+  if (typeof window !== 'undefined') {
+    return `${window.location.origin}/#/auth/callback`
+  }
+  return 'https://regravity.net/#/auth/callback'
+}
+
 // PRODUCTION: Optimized client configuration
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
@@ -17,9 +25,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true,
     // URL redirects for authentication flows
-    redirectTo: typeof window !== 'undefined' 
-      ? `${window.location.origin}/#/auth/callback`
-      : 'https://regravity.net/#/auth/callback',
+    redirectTo: getRedirectUrl(),
   },
   // PRODUCTION: Enhanced connection settings
   db: {
@@ -28,6 +34,14 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   global: {
     headers: {'X-Client-Info': 'regravity-production'},
   }
+})
+
+// Log auth settings for debugging
+console.log('🔑 Auth settings:', {
+  redirectUrl: getRedirectUrl(),
+  persistSession: true,
+  autoRefreshToken: true,
+  detectSessionInUrl: true
 })
 
 // PRODUCTION: Connection test with error handling

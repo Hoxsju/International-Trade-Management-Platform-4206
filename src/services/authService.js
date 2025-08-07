@@ -222,8 +222,15 @@ export class AuthService {
       
       // Use Supabase's built-in password reset
       console.log('📧 Sending password reset email via Supabase...')
+      
+      // Get the current URL for proper redirect handling
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://regravity.net'
+      const redirectTo = `${origin}/#/reset-password`
+      
+      console.log('🔗 Reset password redirect URL:', redirectTo)
+      
       const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: `${window.location.origin}/#/reset-password`
+        redirectTo: redirectTo
       })
       
       if (error) {
@@ -287,12 +294,16 @@ export class AuthService {
       
       const cleanEmail = email.toLowerCase().trim()
       
+      // Get the current URL for proper redirect handling
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://regravity.net'
+      const redirectTo = `${origin}/#/auth/callback`
+      
       // Use Supabase's resend confirmation
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: cleanEmail,
         options: {
-          redirectTo: `${window.location.origin}/#/auth/callback`
+          redirectTo: redirectTo
         }
       })
       

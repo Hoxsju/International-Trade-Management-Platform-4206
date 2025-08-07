@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
@@ -14,19 +14,53 @@ const ResetPasswordForm = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  const [token, setToken] = useState('');
   
-  // Extract token from URL hash params
-  const getHashParams = () => {
-    const hash = window.location.hash.split('#/reset-password')[1] || '';
-    const params = new URLSearchParams(hash.startsWith('?') ? hash : '');
-    return {
-      token: params.get('token') || '',
-      type: params.get('type') || '',
-      email: params.get('email') || ''
-    };
-  };
-
-  const { token } = getHashParams();
+  // Extract token from URL using multiple methods for better reliability
+  useEffect(() => {
+    // Method 1: Extract from hash fragment
+    const hashParams = new URLSearchParams(
+      window.location.hash.split('#/reset-password')[1] || ''
+    );
+    
+    // Method 2: Extract from search params
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    // Method 3: Extract from location state
+    const stateToken = location?.state?.token;
+    
+    // Try all methods and use the first one that works
+    const extractedToken = 
+      hashParams.get('token') || 
+      searchParams.get('token') || 
+      stateToken || 
+      '';
+    
+    console.log('🔑 Password reset token extraction:', {
+      hashToken: hashParams.get('token'),
+      searchToken: searchParams.get('token'),
+      stateToken: stateToken,
+      finalToken: extractedToken
+    });
+    
+    setToken(extractedToken);
+    
+    // If we have a token, check its validity with Supabase
+    if (extractedToken) {
+      const checkToken = async () => {
+        try {
+          const { data, error } = await supabase.auth.getUser();
+          if (!error && data?.user) {
+            console.log('✅ User authenticated with reset token');
+          }
+        } catch (err) {
+          console.warn('⚠️ Token validation warning:', err.message);
+        }
+      };
+      
+      checkToken();
+    }
+  }, [location]);
 
   const onSubmit = async (data) => {
     if (data.newPassword !== data.confirmPassword) {
@@ -38,7 +72,8 @@ const ResetPasswordForm = () => {
     setError('');
     
     try {
-      console.log('🔐 Resetting password with token...');
+      console.log('🔐 Resetting password...');
+      
       // Use Supabase's built-in password reset functionality
       const { error: resetError } = await supabase.auth.updateUser({
         password: data.newPassword
