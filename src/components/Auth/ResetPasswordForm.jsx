@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
 import SafeIcon from '../../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
@@ -14,44 +14,72 @@ const ResetPasswordForm = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [token, setToken] = useState('');
   
-  // Extract token from URL using multiple methods for better reliability
+  // Enhanced token extraction with multiple methods and detailed debugging
   useEffect(() => {
-    // Method 1: Extract from hash fragment
-    const hashParams = new URLSearchParams(
-      window.location.hash.split('#/reset-password')[1] || ''
-    );
+    console.log('🔑 Starting password reset token extraction...');
+    console.log('📍 Current URL:', window.location.href);
     
-    // Method 2: Extract from search params
-    const searchParams = new URLSearchParams(window.location.search);
+    // Method 1: Extract from hash fragment with multiple patterns
+    let hashToken = null;
+    const hashPart = window.location.hash || '';
+    console.log('🔍 Hash part:', hashPart);
+    
+    // Try different hash patterns
+    const hashPatterns = [
+      /#\/reset-password\?token=([^&]+)/,  // /#/reset-password?token=abc
+      /#\/reset-password\/\?token=([^&]+)/,  // /#/reset-password/?token=abc
+      /#\/reset-password\/([^?&]+)/,  // /#/reset-password/abc
+      /#\/reset-password.*token=([^&]+)/,  // Any pattern with token= in hash
+    ];
+    
+    for (const pattern of hashPatterns) {
+      const match = hashPart.match(pattern);
+      if (match && match[1]) {
+        hashToken = match[1];
+        console.log('✅ Found token in hash with pattern:', pattern, hashToken);
+        break;
+      }
+    }
+    
+    // Method 2: Extract from search params (query string)
+    const searchToken = searchParams.get('token');
+    console.log('🔍 Search params token:', searchToken);
     
     // Method 3: Extract from location state
     const stateToken = location?.state?.token;
+    console.log('🔍 Location state token:', stateToken);
     
-    // Try all methods and use the first one that works
-    const extractedToken = 
-      hashParams.get('token') || 
-      searchParams.get('token') || 
-      stateToken || 
-      '';
+    // Method 4: Look for access_token in hash or search (Supabase often uses this)
+    const accessTokenMatch = window.location.href.match(/access_token=([^&]+)/);
+    const accessToken = accessTokenMatch ? accessTokenMatch[1] : null;
+    console.log('🔍 Access token:', accessToken);
     
-    console.log('🔑 Password reset token extraction:', {
-      hashToken: hashParams.get('token'),
-      searchToken: searchParams.get('token'),
-      stateToken: stateToken,
-      finalToken: extractedToken
-    });
+    // Method 5: Look for type=recovery in the URL (Supabase password reset flow)
+    const isRecoveryFlow = window.location.href.includes('type=recovery');
+    console.log('🔍 Is recovery flow:', isRecoveryFlow);
     
+    // Use the first valid token found
+    const extractedToken = hashToken || searchToken || stateToken || accessToken || '';
+    
+    console.log('🔑 Final extracted token:', extractedToken ? `${extractedToken.substring(0, 5)}...` : 'Not found');
     setToken(extractedToken);
     
     // If we have a token, check its validity with Supabase
     if (extractedToken) {
+      console.log('✅ Token found, attempting validation...');
+      
+      // Try to get session info
       const checkToken = async () => {
         try {
-          const { data, error } = await supabase.auth.getUser();
-          if (!error && data?.user) {
-            console.log('✅ User authenticated with reset token');
+          // This will work if the token is already in the URL and Supabase has processed it
+          const { data, error } = await supabase.auth.getSession();
+          if (!error && data?.session) {
+            console.log('✅ Valid session found with token');
+          } else {
+            console.log('⚠️ No active session yet, but token is present');
           }
         } catch (err) {
           console.warn('⚠️ Token validation warning:', err.message);
@@ -59,8 +87,21 @@ const ResetPasswordForm = () => {
       };
       
       checkToken();
+    } else {
+      console.warn('⚠️ No reset token found in URL');
+      
+      // Fallback: Check if user is already authenticated (might be a direct access)
+      const checkAuth = async () => {
+        const { data } = await supabase.auth.getUser();
+        if (data?.user) {
+          console.log('✅ User is already authenticated, may proceed with reset');
+          setToken('authenticated'); // Special case - user is already logged in
+        }
+      };
+      
+      checkAuth();
     }
-  }, [location]);
+  }, [location, searchParams]);
 
   const onSubmit = async (data) => {
     if (data.newPassword !== data.confirmPassword) {

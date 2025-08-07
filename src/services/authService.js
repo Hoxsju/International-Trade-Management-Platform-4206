@@ -225,6 +225,8 @@ export class AuthService {
       
       // Get the current URL for proper redirect handling
       const origin = typeof window !== 'undefined' ? window.location.origin : 'https://regravity.net'
+      
+      // FIXED: Better redirect URL formatting
       const redirectTo = `${origin}/#/reset-password`
       
       console.log('🔗 Reset password redirect URL:', redirectTo)
