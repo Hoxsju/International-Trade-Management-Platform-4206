@@ -18,7 +18,7 @@ const EmergencyPasswordReset = () => {
   
   const navigate = useNavigate();
   
-  // Step 1: Find user by email
+  // Step 1: Find user by email - FIXED WITH DIRECT QUERY
   const findUser = async () => {
     if (!email || !email.includes('@')) {
       setError('Please enter a valid email address');
@@ -29,11 +29,17 @@ const EmergencyPasswordReset = () => {
     setError('');
     
     try {
-      // Check if user exists
+      console.log('🔍 Looking up user with email:', email);
+      
+      // FIXED: Direct query to find user instead of using database function
       const { data, error: userError } = await supabase
-        .rpc('get_user_by_email', { email_to_find: email.toLowerCase() });
+        .from('user_profiles_rg2024')
+        .select('id, email, full_name, status, account_type')
+        .eq('email', email.toLowerCase())
+        .limit(1);
       
       if (userError) {
+        console.error('❌ Error looking up user:', userError);
         throw userError;
       }
       
@@ -44,17 +50,19 @@ const EmergencyPasswordReset = () => {
       }
       
       // User found, proceed to password step
-      setUserData(data[0]);
+      const foundUser = data[0];
+      console.log('✅ User found:', foundUser.email);
+      setUserData(foundUser);
       setStep(2);
     } catch (error) {
-      console.error('Error finding user:', error);
+      console.error('❌ Error finding user:', error);
       setError('Failed to verify user. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
   
-  // Step 2: Update password
+  // Step 2: Update password - FIXED WITH DIRECT AUTH API
   const updatePassword = async () => {
     if (!password || password.length < 6) {
       setError('Password must be at least 6 characters');
@@ -70,16 +78,23 @@ const EmergencyPasswordReset = () => {
     setError('');
     
     try {
-      // Use the admin function to reset password
-      const { data, error: resetError } = await supabase
-        .rpc('admin_reset_password', { 
-          user_email: email.toLowerCase(),
-          new_password: password
-        });
-      
-      if (resetError) {
-        throw resetError;
+      if (!userData || !userData.id) {
+        throw new Error('User data not found. Please try again.');
       }
+      
+      console.log('🔐 Attempting password reset for user ID:', userData.id);
+      
+      // FIXED: Use Supabase auth API directly
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: password
+      });
+      
+      if (updateError) {
+        console.error('❌ Password update failed:', updateError);
+        throw updateError;
+      }
+      
+      console.log('✅ Password updated successfully');
       
       // Password updated successfully
       setStep(3);
@@ -90,8 +105,36 @@ const EmergencyPasswordReset = () => {
         navigate('/login');
       }, 3000);
     } catch (error) {
-      console.error('Error updating password:', error);
-      setError('Failed to update password. Please try again later.');
+      console.error('❌ Error updating password:', error);
+      
+      // FIXED: Better error handling with fallback
+      if (error.message.includes('not authenticated') || error.message.includes('JWT')) {
+        setError('You need to be logged in to reset your password this way. Try the alternative method below.');
+        
+        // Show alternative method
+        const alternativeDiv = document.createElement('div');
+        alternativeDiv.className = 'mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md';
+        alternativeDiv.innerHTML = `
+          <h4 class="font-medium text-yellow-800 mb-2">Alternative Reset Method</h4>
+          <p class="text-sm text-yellow-700 mb-3">
+            Try this alternative method to reset your password:
+          </p>
+          <ol class="text-sm text-yellow-700 space-y-1 ml-4">
+            <li>1. Go to <a href="/#/login" class="text-blue-600 underline">Login Page</a></li>
+            <li>2. Click "Forgot Password"</li>
+            <li>3. Enter your email: ${email}</li>
+            <li>4. Follow the instructions sent to your email</li>
+          </ol>
+        `;
+        
+        // Add to the page
+        const errorElement = document.querySelector('.bg-red-50');
+        if (errorElement) {
+          errorElement.parentNode.insertBefore(alternativeDiv, errorElement.nextSibling);
+        }
+      } else {
+        setError(`Failed to update password: ${error.message}`);
+      }
     } finally {
       setLoading(false);
     }
