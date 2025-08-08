@@ -130,7 +130,7 @@ export class EmailService {
   }
 
   // PRODUCTION: Send password reset email with enhanced error handling
-  static async sendPasswordResetEmail(email, fullName = '', resetToken) {
+  static async sendPasswordResetEmail(email, fullName = '', resetToken, resetUrl = null) {
     console.log('📧 PRODUCTION: Sending password reset email...')
     if (!email || !email.includes('@') || email.length < 5) {
       throw new Error('Invalid email address')
@@ -145,13 +145,13 @@ export class EmailService {
         
         // Create a custom reset link - in production this would be a real reset URL
         const origin = typeof window !== 'undefined' ? window.location.origin : 'https://regravity.net';
-        const resetUrl = `${origin}/#/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+        const finalResetUrl = resetUrl || `${origin}/#/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
         
         // Prepare email parameters
         const emailParams = {
           to_email: email,
           to_name: fullName || email.split('@')[0],
-          reset_link: resetUrl,
+          reset_link: finalResetUrl,
           subject: 'Reset Your Regravity Password',
           expires_in: '1 hour',
           company_name: 'Regravity',
@@ -161,7 +161,7 @@ export class EmailService {
           reply_to: 'support@regravity.net',
           message: `You've requested to reset your password for Regravity. Please click the link below to create a new password. This link will expire in 1 hour.
 
-Reset Link: ${resetUrl}
+Reset Link: ${finalResetUrl}
 
 If you didn't request a password reset, you can safely ignore this email.
 

@@ -265,17 +265,20 @@ export class AuthService {
         const userProfile = await ProfileService.checkUserExists(cleanEmail);
         const fullName = userProfile.exists ? userProfile.fullName : '';
         
+        // Create reset URL with both token and email
+        const resetUrl = `${origin}/#/reset-password?token=${resetToken}&email=${encodeURIComponent(cleanEmail)}`;
+        
         // Send custom password reset email
         await EmailService.sendPasswordResetEmail(
           cleanEmail,
           fullName,
-          resetToken
+          resetToken,
+          resetUrl
         );
         
         console.log('✅ Password reset email sent successfully via EmailJS')
         
         // Store the reset token in localStorage for verification
-        // In production, this should be stored in the database with expiration
         if (typeof window !== 'undefined') {
           const resetData = {
             email: cleanEmail,
@@ -346,7 +349,7 @@ export class AuthService {
 
   // Enhanced update password with better error handling and fallbacks
   static async updatePassword(newPassword, token = null, email = null) {
-    console.log('🔑 Updating password with enhanced method...')
+    console.log('🔑 Updating password with enhanced method...', { hasToken: !!token, hasEmail: !!email })
     try {
       if (!newPassword || newPassword.length < 6) {
         throw new Error('Password must be at least 6 characters')
@@ -392,34 +395,74 @@ export class AuthService {
               // Try to sign in with token and update password
               try {
                 // For Supabase, we need to sign in first
-                // Try to sign in with current credentials if available
-                const { error } = await supabase.auth.signInWithPassword({
-                  email: email,
-                  password: 'dummy-password-123456' // This will likely fail but we'll handle it
-                });
+                // Try to sign in with email
+                console.log('🔑 Attempting passwordless sign-in...')
                 
-                if (!error || error.message.includes('Invalid login credentials')) {
-                  // Try to update password using token
-                  const { error: updateError } = await supabase.auth.updateUser({
-                    password: newPassword
+                // Try to use OTP sign-in (if available)
+                try {
+                  const { error: otpError } = await supabase.auth.signInWithOtp({
+                    email: email
                   })
                   
-                  if (!updateError) {
-                    console.log('✅ Password updated successfully via token')
-                    // Clean up the stored token
-                    localStorage.removeItem('password_reset_' + email);
-                    
-                    return {
-                      success: true,
-                      message: 'Password updated successfully. You can now log in with your new password.',
-                      method: 'token'
-                    }
+                  if (!otpError) {
+                    console.log('✅ OTP sign-in successful')
                   }
+                } catch (otpError) {
+                  console.warn('⚠️ OTP sign-in failed:', otpError.message)
+                }
+                
+                // Try regular sign-in with dummy password (will likely fail but worth trying)
+                try {
+                  const { error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: 'dummy-password-123456' // This will likely fail but we'll handle it
+                  });
+                  
+                  if (!error) {
+                    console.log('✅ Sign-in succeeded somehow')
+                  }
+                } catch (signInError) {
+                  console.warn('⚠️ Sign-in attempt failed as expected:', signInError.message)
+                }
+                
+                // Now try to update password with token
+                console.log('🔑 Attempting to update password via token...')
+                const { error: updateError } = await supabase.auth.updateUser({
+                  password: newPassword
+                })
+                
+                if (!updateError) {
+                  console.log('✅ Password updated successfully via token')
+                  // Clean up the stored token
+                  localStorage.removeItem('password_reset_' + email);
+                  
+                  return {
+                    success: true,
+                    message: 'Password updated successfully. You can now log in with your new password.',
+                    method: 'token'
+                  }
+                } else {
+                  console.warn('⚠️ Token password update failed:', updateError.message)
+                  
+                  // If there's an error with the token update but we have a valid token,
+                  // fall back to the admin password reset method
+                  console.log('🔄 Falling back to admin method with valid token...')
+                  throw new Error('Token-based password reset failed. Trying alternative method...')
                 }
               } catch (tokenUpdateError) {
-                console.warn('⚠️ Token password update failed:', tokenUpdateError)
+                console.warn('⚠️ Token password update failed:', tokenUpdateError.message)
+                throw new Error('Token-based password reset failed. Please try requesting a new reset link.')
               }
+            } else {
+              console.warn('⚠️ Token invalid or expired:', {
+                tokenMatch: resetData.token === token,
+                expired: resetData.expires <= Date.now(),
+                expiresAt: new Date(resetData.expires).toLocaleString()
+              })
+              throw new Error('Password reset token has expired. Please request a new password reset link.')
             }
+          } else {
+            console.warn('⚠️ No stored reset data found for email:', email)
           }
         }
       }
