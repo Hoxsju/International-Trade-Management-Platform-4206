@@ -5,7 +5,7 @@ import { AuthService } from '../../services/authService';
 import SafeIcon from '../../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiMail, FiArrowLeft, FiCheckCircle, FiAlertCircle, FiCopy, FiExternalLink, FiShield } = FiIcons;
+const { FiMail, FiArrowLeft, FiCheckCircle, FiAlertCircle, FiCopy, FiExternalLink } = FiIcons;
 
 const ForgotPasswordForm = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
@@ -20,8 +20,10 @@ const ForgotPasswordForm = () => {
     try {
       // Use enhanced password reset with multiple fallbacks
       const result = await AuthService.resetPassword(data.email);
+      
       if (result.success) {
         setSuccess(true);
+        
         // If we got a manual reset URL, store it for display
         if (result.method === 'manual' && result.resetUrl) {
           setManualResetUrl(result.resetUrl);
@@ -36,7 +38,7 @@ const ForgotPasswordForm = () => {
       setLoading(false);
     }
   };
-
+  
   const copyToClipboard = () => {
     if (navigator.clipboard && manualResetUrl) {
       navigator.clipboard.writeText(manualResetUrl)
@@ -48,7 +50,7 @@ const ForgotPasswordForm = () => {
         });
     }
   };
-
+  
   const openResetLink = () => {
     if (manualResetUrl) {
       window.open(manualResetUrl, '_blank');
@@ -74,7 +76,7 @@ const ForgotPasswordForm = () => {
           <p className="text-green-700 mb-4">
             Click the link in the email, and you'll be directed to a page where you can create a new password.
           </p>
-
+          
           {manualResetUrl && (
             <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left">
               <h4 className="font-medium text-yellow-800 mb-2 flex items-center">
@@ -88,14 +90,14 @@ const ForgotPasswordForm = () => {
                 <p className="text-xs text-yellow-800 truncate font-mono">{manualResetUrl}</p>
               </div>
               <div className="flex space-x-2">
-                <button
+                <button 
                   onClick={copyToClipboard}
                   className="flex items-center space-x-1 bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
                 >
                   <SafeIcon icon={FiCopy} className="h-4 w-4" />
                   <span>Copy Link</span>
                 </button>
-                <button
+                <button 
                   onClick={openResetLink}
                   className="flex items-center space-x-1 bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
                 >
@@ -105,24 +107,7 @@ const ForgotPasswordForm = () => {
               </div>
             </div>
           )}
-
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-            <h4 className="font-medium text-blue-800 mb-2 flex items-center">
-              <SafeIcon icon={FiShield} className="h-5 w-5 mr-2" />
-              Having Trouble?
-            </h4>
-            <p className="text-blue-700 text-sm mb-3">
-              If you're experiencing issues with the password reset email or link, try our emergency password reset option:
-            </p>
-            <Link 
-              to="/emergency-reset" 
-              className="flex items-center space-x-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 inline-block"
-            >
-              <SafeIcon icon={FiShield} className="h-4 w-4" />
-              <span>Emergency Password Reset</span>
-            </Link>
-          </div>
-
+          
           <Link to="/login" className="inline-block bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 mt-4">
             Return to Login
           </Link>
@@ -160,23 +145,6 @@ const ForgotPasswordForm = () => {
               {loading ? 'Sending...' : 'Send Reset Instructions'}
             </button>
           </form>
-
-          <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-800 mb-2 flex items-center">
-              <SafeIcon icon={FiShield} className="h-5 w-5 mr-2" />
-              Password Reset Not Working?
-            </h4>
-            <p className="text-blue-700 text-sm mb-3">
-              If you're experiencing issues with the regular password reset process, try our emergency password reset option:
-            </p>
-            <Link 
-              to="/emergency-reset" 
-              className="flex items-center space-x-1 bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 inline-block"
-            >
-              <SafeIcon icon={FiShield} className="h-4 w-4" />
-              <span>Emergency Password Reset</span>
-            </Link>
-          </div>
 
           <div className="mt-6 text-center">
             <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium flex items-center justify-center">
