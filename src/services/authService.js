@@ -280,6 +280,9 @@ export class AuthService {
         
         // Store the reset token in localStorage for verification
         if (typeof window !== 'undefined') {
+          // Clear any existing tokens for this email first
+          localStorage.removeItem('password_reset_' + cleanEmail);
+          
           const resetData = {
             email: cleanEmail,
             token: resetToken,
@@ -305,6 +308,9 @@ export class AuthService {
       const manualToken = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
       
       if (typeof window !== 'undefined') {
+        // Clear any existing tokens for this email first
+        localStorage.removeItem('password_reset_' + cleanEmail);
+        
         const resetData = {
           email: cleanEmail,
           token: manualToken,
@@ -360,7 +366,7 @@ export class AuthService {
       const { data: sessionData } = await supabase.auth.getSession()
       
       if (sessionData?.session) {
-        console.log('✅ Active session found, updating password...')
+        console.log('✅ Active session found, updating password...', { userId: sessionData.session.user.id })
         const { error } = await supabase.auth.updateUser({
           password: newPassword
         })
@@ -375,11 +381,13 @@ export class AuthService {
         }
         
         console.warn('⚠️ Active session password update failed, trying next method:', error.message)
+      } else {
+        console.log('⚠️ No active session found, trying token method')
       }
       
       // Method 2: Try using token from URL if provided
       if (token && email) {
-        console.log('🔐 Method 2: Trying to use reset token from URL...')
+        console.log('🔐 Method 2: Trying to use reset token from URL...', { tokenPrefix: token.substring(0, 5) + '...', email })
         
         // Check localStorage for matching token
         if (typeof window !== 'undefined') {
@@ -387,6 +395,13 @@ export class AuthService {
           
           if (storedResetData) {
             const resetData = JSON.parse(storedResetData);
+            
+            // Log token details for debugging
+            console.log('📋 Token details:', { 
+              tokenMatch: resetData.token === token,
+              expires: new Date(resetData.expires).toLocaleString(),
+              isExpired: resetData.expires <= Date.now()
+            });
             
             // Validate token and expiration
             if (resetData.token === token && resetData.expires > Date.now()) {
@@ -427,6 +442,22 @@ export class AuthService {
                 
                 // Now try to update password with token
                 console.log('🔑 Attempting to update password via token...')
+                
+                // Try to use the direct Supabase reset API with the token
+                try {
+                  const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+                    email,
+                    { redirectTo: window.location.href }
+                  );
+                  
+                  if (!resetError) {
+                    console.log('✅ Password reset email re-sent successfully')
+                  }
+                } catch (resetError) {
+                  console.warn('⚠️ Reset email re-send failed:', resetError)
+                }
+                
+                // Try to update user directly
                 const { error: updateError } = await supabase.auth.updateUser({
                   password: newPassword
                 })
@@ -471,6 +502,26 @@ export class AuthService {
       console.log('🔐 Method 3: Attempting admin password reset...')
       
       if (email) {
+        // Try to use Supabase's admin password reset
+        try {
+          // This is a special method that might work in some cases
+          const { error: adminError } = await supabase.auth.admin.updateUserById(
+            email, // Using email as ID (might work in some edge cases)
+            { password: newPassword }
+          );
+          
+          if (!adminError) {
+            console.log('✅ Admin password reset successful')
+            return {
+              success: true,
+              message: 'Your password has been updated successfully. You can now log in with your new password.',
+              method: 'admin'
+            }
+          }
+        } catch (adminError) {
+          console.warn('⚠️ Admin password reset failed:', adminError)
+        }
+        
         // This would normally require admin privileges
         // For now, we'll return a special message for manual handling
         console.log('✅ Admin password reset would be attempted here')

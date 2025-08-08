@@ -6,7 +6,7 @@ import { supabase } from '../../config/supabase';
 import SafeIcon from '../../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiLock, FiCheckCircle, FiAlertCircle, FiArrowLeft, FiInfo, FiClock, FiKey, FiRefreshCw } = FiIcons;
+const { FiLock, FiCheckCircle, FiAlertCircle, FiArrowLeft, FiInfo, FiClock, FiKey, FiRefreshCw, FiTrash2, FiMail, FiExternalLink } = FiIcons;
 
 const ResetPasswordForm = () => {
   const { register, handleSubmit, watch, formState: { errors } } = useForm();
@@ -23,10 +23,53 @@ const ResetPasswordForm = () => {
   const [hasCheckedParams, setHasCheckedParams] = useState(false);
   const [processingStage, setProcessingStage] = useState('checking'); // checking, ready, error
   const [retryCount, setRetryCount] = useState(0);
+  const [debugMode, setDebugMode] = useState(false);
+  const [debugInfo, setDebugInfo] = useState({});
+
+  // Debug function
+  const logDebug = (message, data = {}) => {
+    if (debugMode) {
+      console.log(`🔍 DEBUG: ${message}`, data);
+      setDebugInfo(prev => ({ ...prev, [message]: data, timestamp: new Date().toISOString() }));
+    } else {
+      console.log(message, data);
+    }
+  };
+
+  // Clear all reset tokens from localStorage
+  const clearAllResetTokens = () => {
+    logDebug('Clearing all reset tokens from localStorage');
+    try {
+      const tokensToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('password_reset_')) {
+          tokensToRemove.push(key);
+        }
+      }
+      
+      tokensToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        logDebug(`Removed token: ${key}`);
+      });
+      
+      return tokensToRemove.length;
+    } catch (e) {
+      logDebug('Error clearing tokens', e);
+      return 0;
+    }
+  };
 
   // Extract token and email from URL query parameters and hash
   useEffect(() => {
-    console.log('🔍 Checking for reset parameters in URL...');
+    logDebug('🔍 Checking for reset parameters in URL...', { url: window.location.href });
+    
+    // Enable debug mode if needed
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('debug') === 'true') {
+      setDebugMode(true);
+      logDebug('Debug mode enabled');
+    }
     
     // Function to extract parameters from various URL formats
     const extractResetParams = () => {
@@ -78,19 +121,20 @@ const ResetPasswordForm = () => {
       const extractedEmail = queryEmail || hashParams.email || hashParams.e;
       
       // Debug logging
-      if (extractedToken) {
-        console.log('🔑 Found reset token:', extractedToken.substring(0, 5) + '...');
-      } else {
-        console.warn('⚠️ No reset token found in URL');
-      }
-      
-      if (extractedEmail) {
-        console.log('📧 Found email:', extractedEmail);
-      }
+      logDebug('Parameter extraction results', {
+        queryToken,
+        queryEmail,
+        hashParams,
+        accessToken,
+        isRecoveryFlow,
+        hashToken,
+        extractedToken: extractedToken ? `${extractedToken.substring(0, 5)}...` : null,
+        extractedEmail
+      });
       
       // Check for recovery flow
       if (isRecoveryFlow || accessToken) {
-        console.log('✅ Found recovery flow in URL');
+        logDebug('✅ Found recovery flow in URL');
         return { token: accessToken || 'recovery_flow', email: extractedEmail, isRecoveryFlow: true };
       }
       
@@ -106,25 +150,25 @@ const ResetPasswordForm = () => {
       
       // If we have a recovery flow token, try to get session
       if (isRecoveryFlow || extractedToken === 'recovery_flow') {
-        console.log('🔄 Checking for recovery session...');
+        logDebug('🔄 Checking for recovery session...');
         setStatusMessage('Verifying your reset session...');
         
         const checkSession = async () => {
           try {
             const { data } = await supabase.auth.getSession();
             if (data?.session) {
-              console.log('✅ Valid recovery session found');
+              logDebug('✅ Valid recovery session found', { userId: data.session.user.id });
               setToken('valid_session');
               setProcessingStage('ready');
               setStatusMessage('Reset session verified. You can now create a new password.');
             } else {
-              console.log('❌ No recovery session found');
+              logDebug('❌ No recovery session found');
               setProcessingStage('error');
               setStatusMessage('No active reset session found. The reset link may have expired.');
               setError('No active reset session found. Please request a new password reset link.');
             }
           } catch (sessionError) {
-            console.error('Failed to check session:', sessionError);
+            logDebug('Failed to check session:', sessionError);
             setProcessingStage('error');
             setStatusMessage('Error verifying reset session.');
             setError('Failed to verify reset session. Please request a new password reset link.');
@@ -137,7 +181,7 @@ const ResetPasswordForm = () => {
         checkLocalStorageToken(extractedToken, extractedEmail);
       }
     } else {
-      console.warn('⚠️ No reset token found in URL');
+      logDebug('⚠️ No reset token found in URL');
       setProcessingStage('error');
       setStatusMessage('No reset token found. Please request a new password reset.');
       setError('No reset token found. The link may be invalid or expired.');
@@ -154,7 +198,7 @@ const ResetPasswordForm = () => {
   const checkLocalStorageToken = (tokenToCheck, emailValue) => {
     if (typeof window === 'undefined' || !tokenToCheck) return;
     
-    console.log('🔍 Checking localStorage for matching token...');
+    logDebug('🔍 Checking localStorage for matching token...', { tokenToCheck: tokenToCheck.substring(0, 5) + '...', emailValue });
     
     // If we have an email, check specific storage for that email
     if (emailValue) {
@@ -163,14 +207,23 @@ const ResetPasswordForm = () => {
         try {
           const resetData = JSON.parse(storedData);
           if (resetData.token === tokenToCheck && resetData.expires > Date.now()) {
-            console.log('✅ Valid token found in localStorage for email:', emailValue);
+            logDebug('✅ Valid token found in localStorage for email:', emailValue);
             setProcessingStage('ready');
             setStatusMessage('Reset token verified. You can now create a new password.');
             return;
+          } else {
+            logDebug('⚠️ Invalid or expired token for email', {
+              email: emailValue,
+              tokenMatch: resetData.token === tokenToCheck,
+              expired: resetData.expires <= Date.now(),
+              expiresAt: new Date(resetData.expires).toLocaleString()
+            });
           }
         } catch (e) {
-          console.error('Error parsing localStorage data:', e);
+          logDebug('Error parsing localStorage data:', e);
         }
+      } else {
+        logDebug('⚠️ No stored reset data found for email:', emailValue);
       }
     }
     
@@ -185,46 +238,46 @@ const ResetPasswordForm = () => {
           if (resetData.token === tokenToCheck && resetData.expires > Date.now()) {
             found = true;
             const emailFromKey = key.replace('password_reset_', '');
-            console.log('✅ Valid token found in localStorage with key:', key);
+            logDebug('✅ Valid token found in localStorage with key:', key);
             setEmail(emailFromKey);
             setProcessingStage('ready');
             setStatusMessage('Reset token verified. You can now create a new password.');
             break;
           }
         } catch (e) {
-          console.error('Error checking localStorage item:', e);
+          logDebug('Error checking localStorage item:', e);
         }
       }
     }
     
     if (!found) {
-      console.log('⚠️ Token not found in localStorage or has expired');
-      // Don't set error here - the token might still be valid through other means
+      logDebug('⚠️ Token not found in localStorage or has expired');
+      // Don't set error here - we'll try the session method next
     }
   };
 
   // Once we've checked the parameters, check for an active session if needed
   useEffect(() => {
     if (hasCheckedParams && !token && processingStage === 'checking') {
-      console.log('🔍 No token found in URL, checking for active session...');
+      logDebug('🔍 No token found in URL, checking for active session...');
       setStatusMessage('Checking for active session...');
       
       const checkActiveSession = async () => {
         try {
           const { data } = await supabase.auth.getSession();
           if (data?.session) {
-            console.log('✅ Active session found, allowing password reset');
+            logDebug('✅ Active session found, allowing password reset', { userId: data.session.user.id });
             setToken('active_session');
             setProcessingStage('ready');
             setStatusMessage('Active session found. You can reset your password.');
           } else {
-            console.log('❌ No active session found');
+            logDebug('❌ No active session found');
             setProcessingStage('error');
             setStatusMessage('No active session found. Please request a new password reset.');
             setError('No reset token found. This link may be invalid or expired. Please request a new password reset.');
           }
         } catch (sessionError) {
-          console.error('Failed to check session:', sessionError);
+          logDebug('Failed to check session:', sessionError);
           setProcessingStage('error');
           setStatusMessage('Error checking session status.');
           setError('Failed to verify your session. Please request a new password reset.');
@@ -246,19 +299,20 @@ const ResetPasswordForm = () => {
     setStatusMessage('Resetting your password...');
     
     try {
-      console.log('🔐 Resetting password...');
+      logDebug('🔐 Resetting password...', { token: token ? token.substring(0, 5) + '...' : 'none', email });
       
       // Use enhanced password update method with token and email
       const result = await AuthService.updatePassword(data.newPassword, token, email);
 
       if (result.success) {
-        console.log('✅ Password reset successful:', result);
+        logDebug('✅ Password reset successful:', result);
         setSuccess(true);
         setStatusMessage('Your password has been updated successfully!');
         
         // Clean up localStorage token if it exists
         if (email) {
           localStorage.removeItem('password_reset_' + email);
+          logDebug('🧹 Cleaned up token for:', email);
         }
         
         // Redirect to login after a delay
@@ -269,7 +323,7 @@ const ResetPasswordForm = () => {
         throw new Error(result.message || 'Failed to reset password. Please try again.');
       }
     } catch (err) {
-      console.error('💥 Password reset failed:', err);
+      logDebug('💥 Password reset failed:', err);
       setError(err.message);
       setStatusMessage('Failed to reset your password.');
     } finally {
@@ -298,18 +352,18 @@ const ResetPasswordForm = () => {
         try {
           const { data } = await supabase.auth.getSession();
           if (data?.session) {
-            console.log('✅ Active session found on retry, allowing password reset');
+            logDebug('✅ Active session found on retry, allowing password reset');
             setToken('active_session');
             setProcessingStage('ready');
             setStatusMessage('Active session found. You can reset your password.');
           } else {
-            console.log('❌ No active session found on retry');
+            logDebug('❌ No active session found on retry');
             setProcessingStage('error');
             setStatusMessage('No active session found. Please request a new password reset.');
             setError('No reset token found. This link may be invalid or expired. Please request a new password reset.');
           }
         } catch (sessionError) {
-          console.error('Failed to check session on retry:', sessionError);
+          logDebug('Failed to check session on retry:', sessionError);
           setProcessingStage('error');
           setStatusMessage('Error checking session status.');
           setError('Failed to verify your session. Please request a new password reset.');
@@ -318,6 +372,13 @@ const ResetPasswordForm = () => {
       
       checkActiveSession();
     }
+  };
+
+  // Handle clearing all localStorage reset tokens
+  const handleClearTokens = () => {
+    const count = clearAllResetTokens();
+    alert(`Cleared ${count} password reset tokens from local storage.`);
+    setStatusMessage(`Cleared ${count} reset tokens. Please try again or request a new reset link.`);
   };
 
   return (
@@ -372,6 +433,13 @@ const ResetPasswordForm = () => {
                 >
                   <SafeIcon icon={FiRefreshCw} className="h-4 w-4" />
                   <span>Try Again</span>
+                </button>
+                <button 
+                  onClick={handleClearTokens}
+                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 flex items-center justify-center space-x-2"
+                >
+                  <SafeIcon icon={FiTrash2} className="h-4 w-4" />
+                  <span>Clear Reset Tokens</span>
                 </button>
                 <a 
                   href="/#/forgot-password" 
@@ -438,6 +506,17 @@ const ResetPasswordForm = () => {
               >
                 {loading ? 'Resetting Password...' : 'Reset Password'}
               </button>
+              
+              {/* Show clear tokens button for easier troubleshooting */}
+              <div className="text-center mt-3">
+                <button 
+                  type="button" 
+                  onClick={handleClearTokens}
+                  className="text-xs text-gray-500 hover:text-gray-700 underline"
+                >
+                  Clear all reset tokens
+                </button>
+              </div>
             </form>
           )}
 
@@ -450,6 +529,39 @@ const ResetPasswordForm = () => {
               <span>Back to Login</span>
             </a>
           </div>
+          
+          {/* Debug Information (only shown in debug mode) */}
+          {debugMode && (
+            <div className="mt-6 p-4 bg-gray-100 border border-gray-300 rounded-lg">
+              <h4 className="font-medium text-gray-800 mb-2 flex items-center">
+                <SafeIcon icon={FiInfo} className="h-4 w-4 mr-1" />
+                Debug Information
+              </h4>
+              <div className="overflow-auto max-h-64 text-xs font-mono">
+                <pre className="text-gray-700">
+                  {JSON.stringify({
+                    url: window.location.href,
+                    token: token ? `${token.substring(0, 5)}...` : null,
+                    email,
+                    processingStage,
+                    hasCheckedParams,
+                    retryCount,
+                    localStorageKeys: Object.keys(localStorage).filter(k => k.startsWith('password_reset_')),
+                    ...debugInfo
+                  }, null, 2)}
+                </pre>
+              </div>
+              <div className="mt-2 flex justify-end">
+                <a 
+                  href={`/#/reset-password?${new URLSearchParams(window.location.search)}&debug=true`}
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                >
+                  <SafeIcon icon={FiExternalLink} className="h-3 w-3 mr-1" />
+                  Refresh with Debug
+                </a>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
