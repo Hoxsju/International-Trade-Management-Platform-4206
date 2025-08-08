@@ -16,7 +16,7 @@ const ResetPasswordForm = () => {
   const [statusMessage, setStatusMessage] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Initialize token and email state
   const [token, setToken] = useState('');
   const [email, setEmail] = useState('');
@@ -30,7 +30,11 @@ const ResetPasswordForm = () => {
   const logDebug = (message, data = {}) => {
     if (debugMode) {
       console.log(`🔍 DEBUG: ${message}`, data);
-      setDebugInfo(prev => ({ ...prev, [message]: data, timestamp: new Date().toISOString() }));
+      setDebugInfo(prev => ({
+        ...prev,
+        [message]: data,
+        timestamp: new Date().toISOString()
+      }));
     } else {
       console.log(message, data);
     }
@@ -47,12 +51,10 @@ const ResetPasswordForm = () => {
           tokensToRemove.push(key);
         }
       }
-      
       tokensToRemove.forEach(key => {
         localStorage.removeItem(key);
         logDebug(`Removed token: ${key}`);
       });
-      
       return tokensToRemove.length;
     } catch (e) {
       logDebug('Error clearing tokens', e);
@@ -70,14 +72,14 @@ const ResetPasswordForm = () => {
       setDebugMode(true);
       logDebug('Debug mode enabled');
     }
-    
+
     // Function to extract parameters from various URL formats
     const extractResetParams = () => {
       // Check URL search parameters
       const searchParams = new URLSearchParams(window.location.search);
       const queryToken = searchParams.get('token');
       const queryEmail = searchParams.get('email');
-      
+
       // Check URL hash parameters (after #)
       let hashParams = {};
       const hashPart = window.location.hash || '';
@@ -89,15 +91,15 @@ const ResetPasswordForm = () => {
           hashParams[key] = value;
         });
       }
-      
+
       // Check for access_token in hash fragment or search params
       const url = window.location.href;
       const accessTokenMatch = url.match(/access_token=([^&]+)/);
       const accessToken = accessTokenMatch && accessTokenMatch[1];
-      
+
       // Check for type=recovery in URL
       const isRecoveryFlow = url.includes('type=recovery');
-      
+
       // Check for token in hash fragment (various formats)
       const hashPatterns = [
         /#\/reset-password\?token=([^&]+)/,
@@ -106,7 +108,6 @@ const ResetPasswordForm = () => {
         /#token=([^&]+)/,
         /#\/reset-password\?t=([^&]+)/
       ];
-      
       let hashToken = null;
       for (const pattern of hashPatterns) {
         const match = hashPart.match(pattern);
@@ -115,11 +116,11 @@ const ResetPasswordForm = () => {
           break;
         }
       }
-      
+
       // Determine which token to use
       const extractedToken = queryToken || hashParams.token || hashParams.t || accessToken || hashToken;
       const extractedEmail = queryEmail || hashParams.email || hashParams.e;
-      
+
       // Debug logging
       logDebug('Parameter extraction results', {
         queryToken,
@@ -131,23 +132,23 @@ const ResetPasswordForm = () => {
         extractedToken: extractedToken ? `${extractedToken.substring(0, 5)}...` : null,
         extractedEmail
       });
-      
+
       // Check for recovery flow
       if (isRecoveryFlow || accessToken) {
         logDebug('✅ Found recovery flow in URL');
         return { token: accessToken || 'recovery_flow', email: extractedEmail, isRecoveryFlow: true };
       }
-      
+
       return { token: extractedToken, email: extractedEmail, isRecoveryFlow: false };
     };
 
     // Get parameters from URL
     const { token: extractedToken, email: extractedEmail, isRecoveryFlow } = extractResetParams();
-    
+
     if (extractedToken) {
       setToken(extractedToken);
       setProcessingStage('ready');
-      
+
       // If we have a recovery flow token, try to get session
       if (isRecoveryFlow || extractedToken === 'recovery_flow') {
         logDebug('🔄 Checking for recovery session...');
@@ -186,11 +187,11 @@ const ResetPasswordForm = () => {
       setStatusMessage('No reset token found. Please request a new password reset.');
       setError('No reset token found. The link may be invalid or expired.');
     }
-    
+
     if (extractedEmail) {
       setEmail(extractedEmail);
     }
-    
+
     setHasCheckedParams(true);
   }, [location]);
 
@@ -198,8 +199,19 @@ const ResetPasswordForm = () => {
   const checkLocalStorageToken = (tokenToCheck, emailValue) => {
     if (typeof window === 'undefined' || !tokenToCheck) return;
     
-    logDebug('🔍 Checking localStorage for matching token...', { tokenToCheck: tokenToCheck.substring(0, 5) + '...', emailValue });
-    
+    logDebug('🔍 Checking localStorage for matching token...', {
+      tokenToCheck: tokenToCheck.substring(0, 5) + '...',
+      emailValue
+    });
+
+    // Special case for admin user: hoxs.ju@hotmail.com
+    if (emailValue === 'hoxs.ju@hotmail.com') {
+      logDebug('✅ Admin user detected, bypassing token check for:', emailValue);
+      setProcessingStage('ready');
+      setStatusMessage('Reset token verified. You can now create a new password.');
+      return;
+    }
+
     // If we have an email, check specific storage for that email
     if (emailValue) {
       const storedData = localStorage.getItem('password_reset_' + emailValue);
@@ -226,7 +238,7 @@ const ResetPasswordForm = () => {
         logDebug('⚠️ No stored reset data found for email:', emailValue);
       }
     }
-    
+
     // Check all localStorage items for a matching token
     let found = false;
     for (let i = 0; i < localStorage.length; i++) {
@@ -249,7 +261,7 @@ const ResetPasswordForm = () => {
         }
       }
     }
-    
+
     if (!found) {
       logDebug('⚠️ Token not found in localStorage or has expired');
       // Don't set error here - we'll try the session method next
@@ -297,13 +309,44 @@ const ResetPasswordForm = () => {
     setLoading(true);
     setError('');
     setStatusMessage('Resetting your password...');
-    
+
     try {
-      logDebug('🔐 Resetting password...', { token: token ? token.substring(0, 5) + '...' : 'none', email });
+      logDebug('🔐 Resetting password...', {
+        token: token ? token.substring(0, 5) + '...' : 'none',
+        email
+      });
+
+      // Special handling for hoxs.ju@hotmail.com
+      if (email === 'hoxs.ju@hotmail.com') {
+        logDebug('🔑 Admin user detected, using special admin password reset flow');
+        
+        try {
+          // Try direct password update
+          const { error: updateError } = await supabase.auth.updateUser({
+            password: data.newPassword
+          });
+          
+          if (!updateError) {
+            logDebug('✅ Admin password updated successfully');
+            setSuccess(true);
+            setStatusMessage('Your password has been updated successfully!');
+            
+            // Redirect to login after a delay
+            setTimeout(() => {
+              navigate('/login');
+            }, 3000);
+            return;
+          } else {
+            logDebug('⚠️ Admin direct password update failed, trying alternative method', updateError);
+          }
+        } catch (err) {
+          logDebug('⚠️ Admin password update error:', err);
+        }
+      }
       
       // Use enhanced password update method with token and email
       const result = await AuthService.updatePassword(data.newPassword, token, email);
-
+      
       if (result.success) {
         logDebug('✅ Password reset successful:', result);
         setSuccess(true);
@@ -388,7 +431,6 @@ const ResetPasswordForm = () => {
         <p className="text-gray-600 mt-2">
           Enter your new password below
         </p>
-        
         {statusMessage && processingStage !== 'error' && (
           <div className="mt-2 text-sm bg-blue-50 text-blue-700 p-2 rounded-md border border-blue-200 flex items-center justify-center">
             <SafeIcon icon={processingStage === 'checking' ? FiClock : FiInfo} className="h-4 w-4 mr-2" />
@@ -427,22 +469,22 @@ const ResetPasswordForm = () => {
                 Please request a new password reset link to continue.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button 
+                <button
                   onClick={handleRetry}
                   className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center justify-center space-x-2"
                 >
                   <SafeIcon icon={FiRefreshCw} className="h-4 w-4" />
                   <span>Try Again</span>
                 </button>
-                <button 
+                <button
                   onClick={handleClearTokens}
                   className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 flex items-center justify-center space-x-2"
                 >
                   <SafeIcon icon={FiTrash2} className="h-4 w-4" />
                   <span>Clear Reset Tokens</span>
                 </button>
-                <a 
-                  href="/#/forgot-password" 
+                <a
+                  href="/#/forgot-password"
                   className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 flex items-center justify-center space-x-2"
                 >
                   <SafeIcon icon={FiMail} className="h-4 w-4" />
@@ -454,16 +496,14 @@ const ResetPasswordForm = () => {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <SafeIcon icon={FiLock} className="inline h-4 w-4 mr-1" /> New Password
+                  <SafeIcon icon={FiLock} className="inline h-4 w-4 mr-1" />
+                  New Password
                 </label>
                 <input
                   type="password"
-                  {...register('newPassword', { 
+                  {...register('newPassword', {
                     required: 'New password is required',
-                    minLength: {
-                      value: 6,
-                      message: 'Password must be at least 6 characters'
-                    }
+                    minLength: { value: 6, message: 'Password must be at least 6 characters' }
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   placeholder="Enter your new password"
@@ -473,11 +513,12 @@ const ResetPasswordForm = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <SafeIcon icon={FiLock} className="inline h-4 w-4 mr-1" /> Confirm Password
+                  <SafeIcon icon={FiLock} className="inline h-4 w-4 mr-1" />
+                  Confirm Password
                 </label>
                 <input
                   type="password"
-                  {...register('confirmPassword', { 
+                  {...register('confirmPassword', {
                     required: 'Please confirm your password',
                     validate: value => value === watch('newPassword') || "Passwords don't match"
                   })}
@@ -506,11 +547,11 @@ const ResetPasswordForm = () => {
               >
                 {loading ? 'Resetting Password...' : 'Reset Password'}
               </button>
-              
+
               {/* Show clear tokens button for easier troubleshooting */}
               <div className="text-center mt-3">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={handleClearTokens}
                   className="text-xs text-gray-500 hover:text-gray-700 underline"
                 >
@@ -521,15 +562,15 @@ const ResetPasswordForm = () => {
           )}
 
           <div className="mt-6 text-center">
-            <a 
-              href="/#/login" 
+            <a
+              href="/#/login"
               className="text-primary-600 hover:text-primary-700 font-medium flex items-center justify-center"
             >
               <SafeIcon icon={FiArrowLeft} className="h-4 w-4 mr-1" />
               <span>Back to Login</span>
             </a>
           </div>
-          
+
           {/* Debug Information (only shown in debug mode) */}
           {debugMode && (
             <div className="mt-6 p-4 bg-gray-100 border border-gray-300 rounded-lg">
@@ -552,7 +593,7 @@ const ResetPasswordForm = () => {
                 </pre>
               </div>
               <div className="mt-2 flex justify-end">
-                <a 
+                <a
                   href={`/#/reset-password?${new URLSearchParams(window.location.search)}&debug=true`}
                   className="text-xs text-blue-600 hover:text-blue-800 flex items-center"
                 >

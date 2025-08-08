@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-// PRODUCTION: Hardcoded configuration for reliability 
+// PRODUCTION: Hardcoded configuration for reliability
 const supabaseUrl = 'https://ziatqeyfcafhaswxhnzu.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppYXRxZXlmY2FmaGFzd3hobnp1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzNjI0MzksImV4cCI6MjA2NjkzODQzOX0.gfPv1FyyFFsAamgBC2bnlvL-a36LegsoR9u9TyKm6GY'
 
@@ -32,7 +32,9 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     schema: 'public',
   },
   global: {
-    headers: {'X-Client-Info': 'regravity-production'},
+    headers: {
+      'X-Client-Info': 'regravity-production'
+    },
   }
 })
 
@@ -52,7 +54,7 @@ if (typeof window !== 'undefined') {
       const { data, error } = await supabase
         .from('user_profiles_rg2024')
         .select('count', { count: 'exact', head: true })
-        
+
       if (error) {
         console.warn('⚠️ Supabase connection warning:', error.message)
       } else {
@@ -62,7 +64,7 @@ if (typeof window !== 'undefined') {
       console.warn('⚠️ Supabase connection test failed:', err.message)
     }
   }
-  
+
   // Test connection with delay to avoid blocking app startup
   setTimeout(testConnection, 1000)
 }
