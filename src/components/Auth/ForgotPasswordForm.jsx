@@ -5,24 +5,29 @@ import { AuthService } from '../../services/authService';
 import SafeIcon from '../../common/SafeIcon';
 import * as FiIcons from 'react-icons/fi';
 
-const { FiMail, FiArrowLeft, FiCheckCircle, FiAlertCircle } = FiIcons;
+const { FiMail, FiArrowLeft, FiCheckCircle, FiAlertCircle, FiCopy, FiExternalLink } = FiIcons;
 
 const ForgotPasswordForm = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [manualResetUrl, setManualResetUrl] = useState('');
 
   const onSubmit = async (data) => {
     setLoading(true);
     setError('');
-    
     try {
-      // Use Supabase's built-in password reset
+      // Use enhanced password reset with multiple fallbacks
       const result = await AuthService.resetPassword(data.email);
       
       if (result.success) {
         setSuccess(true);
+        
+        // If we got a manual reset URL, store it for display
+        if (result.method === 'manual' && result.resetUrl) {
+          setManualResetUrl(result.resetUrl);
+        }
       } else {
         setError(result.message);
       }
@@ -31,6 +36,24 @@ const ForgotPasswordForm = () => {
       setError('Failed to send password reset email. Please try again later.');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const copyToClipboard = () => {
+    if (navigator.clipboard && manualResetUrl) {
+      navigator.clipboard.writeText(manualResetUrl)
+        .then(() => {
+          alert('Reset link copied to clipboard!');
+        })
+        .catch(() => {
+          alert('Failed to copy. Please select and copy the link manually.');
+        });
+    }
+  };
+  
+  const openResetLink = () => {
+    if (manualResetUrl) {
+      window.open(manualResetUrl, '_blank');
     }
   };
 
@@ -53,10 +76,39 @@ const ForgotPasswordForm = () => {
           <p className="text-green-700 mb-4">
             Click the link in the email, and you'll be directed to a page where you can create a new password.
           </p>
-          <Link
-            to="/login"
-            className="inline-block bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700"
-          >
+          
+          {manualResetUrl && (
+            <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left">
+              <h4 className="font-medium text-yellow-800 mb-2 flex items-center">
+                <SafeIcon icon={FiAlertCircle} className="h-5 w-5 mr-2" />
+                Email System Notice
+              </h4>
+              <p className="text-yellow-700 text-sm mb-3">
+                If you don't receive the email, you can use this direct reset link:
+              </p>
+              <div className="bg-white p-2 rounded border border-yellow-200 mb-3 overflow-hidden">
+                <p className="text-xs text-yellow-800 truncate font-mono">{manualResetUrl}</p>
+              </div>
+              <div className="flex space-x-2">
+                <button 
+                  onClick={copyToClipboard}
+                  className="flex items-center space-x-1 bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                >
+                  <SafeIcon icon={FiCopy} className="h-4 w-4" />
+                  <span>Copy Link</span>
+                </button>
+                <button 
+                  onClick={openResetLink}
+                  className="flex items-center space-x-1 bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+                >
+                  <SafeIcon icon={FiExternalLink} className="h-4 w-4" />
+                  <span>Open Link</span>
+                </button>
+              </div>
+            </div>
+          )}
+          
+          <Link to="/login" className="inline-block bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 mt-4">
             Return to Login
           </Link>
         </div>

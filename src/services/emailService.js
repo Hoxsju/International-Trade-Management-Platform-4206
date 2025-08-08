@@ -5,14 +5,12 @@ export class EmailService {
     if (typeof window === 'undefined') {
       throw new Error('EmailJS only works in browser environment')
     }
-    
+
     let lastError = null
-    
     // Try multiple initialization attempts
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         console.log(`📧 EmailJS init attempt ${attempt}/3...`)
-        
         // Dynamic import with timeout
         const emailjsModule = await Promise.race([
           import('@emailjs/browser'),
@@ -20,7 +18,6 @@ export class EmailService {
         ])
         
         const emailjs = emailjsModule.default
-        
         if (!emailjs?.init) {
           throw new Error('EmailJS module incomplete')
         }
@@ -37,16 +34,13 @@ export class EmailService {
         
         // Initialize with retry
         emailjs.init(config.publicKey)
-        
         // Test initialization
         await new Promise(resolve => setTimeout(resolve, 500))
-        
         console.log(`✅ EmailJS initialized successfully on attempt ${attempt}`)
         return { emailjs, config }
       } catch (error) {
         console.warn(`❌ EmailJS init attempt ${attempt} failed:`, error.message)
         lastError = error
-        
         if (attempt < 3) {
           // Wait before retry
           await new Promise(resolve => setTimeout(resolve, 1000 * attempt))
@@ -68,18 +62,15 @@ export class EmailService {
   // PRODUCTION: Robust email sending with multiple retry attempts
   static async sendVerificationCode(email, fullName = '', purpose = 'signup') {
     console.log(`📧 PRODUCTION: Sending ${purpose} verification to:`, email)
-    
     if (!email || !email.includes('@') || email.length < 5) {
       throw new Error('Invalid email address')
     }
-    
+
     let lastError = null
-    
     // Try multiple send attempts
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         console.log(`📤 Email send attempt ${attempt}/3...`)
-        
         const { emailjs, config } = await this.initEmailJS()
         const verificationCode = this.generateVerificationCode()
         
@@ -99,7 +90,6 @@ export class EmailService {
         }
         
         console.log('📤 Sending email via EmailJS...')
-        
         // Send with timeout
         const response = await Promise.race([
           emailjs.send(config.serviceId, config.templateIds.verification, emailParams),
@@ -107,7 +97,6 @@ export class EmailService {
         ])
         
         console.log(`✅ Email sent successfully on attempt ${attempt}!`)
-        
         return {
           success: true,
           code: verificationCode,
@@ -119,7 +108,6 @@ export class EmailService {
       } catch (error) {
         console.warn(`❌ Email send attempt ${attempt} failed:`, error.message)
         lastError = error
-        
         if (attempt < 3) {
           // Wait before retry with exponential backoff
           await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)))
@@ -128,10 +116,8 @@ export class EmailService {
     }
     
     console.error('💥 All email send attempts failed:', lastError)
-    
     // Enhanced error messages
     const errorMessage = lastError?.message || lastError?.text || String(lastError)
-    
     if (errorMessage.includes('timeout')) {
       throw new Error('Email service timeout. Please try again.')
     } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
@@ -143,25 +129,23 @@ export class EmailService {
     }
   }
 
-  // PRODUCTION: Send password reset email
+  // PRODUCTION: Send password reset email with enhanced error handling
   static async sendPasswordResetEmail(email, fullName = '', resetToken) {
     console.log('📧 PRODUCTION: Sending password reset email...')
-    
     if (!email || !email.includes('@') || email.length < 5) {
       throw new Error('Invalid email address')
     }
-    
+
     let lastError = null
-    
     // Try multiple send attempts
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         console.log(`📤 Password reset email attempt ${attempt}/3...`)
-        
         const { emailjs, config } = await this.initEmailJS()
         
         // Create a custom reset link - in production this would be a real reset URL
-        const resetUrl = `https://regravity.net/#/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://regravity.net';
+        const resetUrl = `${origin}/#/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
         
         // Prepare email parameters
         const emailParams = {
@@ -188,7 +172,6 @@ support@regravity.net`,
         }
         
         console.log('📤 Sending password reset email via EmailJS...')
-        
         // Send with timeout using the general template
         const response = await Promise.race([
           emailjs.send(config.serviceId, config.templateIds.general, emailParams),
@@ -196,7 +179,6 @@ support@regravity.net`,
         ])
         
         console.log(`✅ Password reset email sent successfully on attempt ${attempt}!`)
-        
         return {
           success: true,
           email: email,
@@ -206,7 +188,6 @@ support@regravity.net`,
       } catch (error) {
         console.warn(`❌ Password reset email attempt ${attempt} failed:`, error.message)
         lastError = error
-        
         if (attempt < 3) {
           // Wait before retry with exponential backoff
           await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)))
@@ -215,10 +196,8 @@ support@regravity.net`,
     }
     
     console.error('💥 All password reset email attempts failed:', lastError)
-    
     // Enhanced error messages
     const errorMessage = lastError?.message || lastError?.text || String(lastError)
-    
     if (errorMessage.includes('timeout')) {
       throw new Error('Email service timeout. Please try again.')
     } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
@@ -233,13 +212,11 @@ support@regravity.net`,
   // PRODUCTION: Send contact form with retry logic
   static async sendContactForm(formData) {
     console.log('📧 PRODUCTION: Sending contact form...')
-    
     if (!formData.email || !formData.fullName || !formData.message) {
       throw new Error('Please fill in all required fields')
     }
-    
+
     let lastError = null
-    
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         const { emailjs, config } = await this.initEmailJS()
@@ -250,6 +227,7 @@ support@regravity.net`,
           from_email: formData.email,
           subject: formData.subject || 'Contact Form - Regravity',
           message: `Contact Form Submission from regravity.net
+
 From: ${formData.fullName}
 Email: ${formData.email}
 Subject: ${formData.subject || 'General Inquiry'}
@@ -274,7 +252,6 @@ Time: ${new Date().toLocaleString()}`,
       } catch (error) {
         console.warn(`❌ Contact form attempt ${attempt} failed:`, error.message)
         lastError = error
-        
         if (attempt < 2) {
           await new Promise(resolve => setTimeout(resolve, 2000))
         }
@@ -288,7 +265,6 @@ Time: ${new Date().toLocaleString()}`,
   static async testEmailService() {
     try {
       const { emailjs, config } = await this.initEmailJS()
-      
       return {
         success: true,
         message: 'EmailJS service ready for production',
@@ -300,6 +276,61 @@ Time: ${new Date().toLocaleString()}`,
       }
     } catch (error) {
       throw new Error(`EmailJS test failed: ${error.message}`)
+    }
+  }
+  
+  // Create a manual fallback text for when email sending fails
+  static createManualFallbackText(type, data) {
+    switch (type) {
+      case 'password_reset':
+        return `
+Dear ${data.name || 'User'},
+
+You requested a password reset for your Regravity account.
+
+Please use this link to reset your password:
+${data.resetUrl}
+
+This link will expire in 1 hour.
+
+If you didn't request this reset, please ignore this message.
+
+Best regards,
+Regravity Support Team
+        `.trim();
+      
+      case 'buyer_invitation':
+        return `
+Dear ${data.name || 'User'},
+
+${data.senderName} from ${data.senderCompany} has invited you to join Regravity as a buyer.
+
+Please use this link to create your account:
+https://regravity.net/#/register?type=buyer&email=${encodeURIComponent(data.email)}
+
+Regravity is a secure international trade platform connecting overseas buyers with Chinese suppliers.
+
+Best regards,
+Regravity Team
+        `.trim();
+        
+      case 'supplier_invitation':
+        return `
+Dear ${data.name || 'User'},
+
+${data.senderName} from ${data.senderCompany} has invited you to join Regravity as a supplier.
+
+Please use this link to create your account:
+https://regravity.net/#/register?type=supplier&email=${encodeURIComponent(data.email)}
+
+Regravity is a secure international trade platform connecting overseas buyers with Chinese suppliers.
+
+Best regards,
+Regravity Team
+        `.trim();
+        
+      default:
+        return 'Please contact support@regravity.net for assistance.';
     }
   }
 }
